@@ -8,7 +8,8 @@ import time
 
 from src.definition.loader import load_from_yaml
 from src.definition.graph import MetricLineageGraph
-from src.rca_engine.impact_analysis import ImpactAnalyzer, ChangeEvent, ChangeType, ImpactReport
+from src.definition.model import ChangeEvent, ChangeType
+from src.rca_engine.impact_analysis import ImpactAnalyzer, ImpactReport
 
 app = FastAPI(title="Unified Metrics Platform API")
 

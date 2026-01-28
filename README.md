@@ -1,55 +1,95 @@
 # Unified Metrics & Experimentation Platform
 
-A staff-level unified platform for metrics definition, streaming aggregation, querying, alerting, and root cause analysis (RCA).
+![System Architecture](docs/images/architecture.png)
+![demo](docs/images/image.png)
 
-## Core Architecture
+A **Staff-Level** unified platform designed for next-generation observability, combining metrics definition, streaming aggregation, and intelligent root cause analysis (RCA).
 
-The platform follows a standard data engineering lifecycle with advanced capabilities for governance and intelligence:
+## 🚀 Core Philosophy
+
+The platform shifts from passive monitoring to active intelligence by implementing a standard data engineering lifecycle enriched with automated governance:
 
 `Metrics Definition` → `Streaming Aggregation` → `Query Layer` → `Alerting` → `Root Cause Analysis`
 
-## Key Focus Areas
+---
 
-1.  **Metrics Lineage**: Automated extraction of dependencies between raw events, intermediate tables, and final metrics.
-2.  **Change Impact Analysis**: Correlating infrastructure/code changes with metric deviations.
-3.  **Automated Anomaly Detection**: Unsupervised learning models to detect metric anomalies without manual thresholding.
+## 🔑 Key Focus Areas
 
-## Architecture Guidelines
+### 1. 🕸️ Metrics Lineage (指标血缘)
+*   **Problem**: "Metric A dropped, but why?" usually involves digging through SQL/Code.
+*   **Solution**: Automated extraction of dependencies. We treat metrics as a Directed Acyclic Graph (DAG), mapping raw events → intermediate tables → final metrics.
 
-*   **Definition as Code**: All metrics are defined in version-controlled YAML/DSL.
-*   **Stream-First**: Metrics are aggregated in real-time.
-*   **Metadata Driven**: Lineage and Impact Analysis rely on a centralized metadata store.
+### 2. ⚡ Change Impact Analysis (变更影响分析)
+*   **Problem**: Deployments often break downstream metrics silently.
+*   **Solution**: By correlating **Change Events** (Deployments, Config Updates) with the **Lineage Graph**, we can predict and score the potential "Blast Radius" of a change before or immediately after it happens.
 
-## Tech Stack (MVP)
+### 3. 🤖 Automated Anomaly Detection (自动异常检测)
+*   **Problem**: Static thresholds (`if cpu > 80%`) are noisy and rigid.
+*   **Solution**: Unsupervised learning models (e.g., Z-Score, Isolation Forest) that learn the "normal" behavior of a metric and flag statistical deviations automatically.
+
+---
+
+## 🛠️ Architecture & Tech Stack (MVP)
 
 *   **Language**: Python 3.10+
-*   **Processing**: In-memory streaming (simulating Flink/Spark)
-*   **Storage**: Time-series optimized (simulating ClickHouse/Druid)
-*   **Analysis**: Pandas/Scikit-learn for RCA and Anomaly Detection
+*   **API**: FastAPI
+*   **Frontend**: HTML5 + D3.js (Interactive visual graph)
+*   **Processing**: In-memory streaming (Architecture supports Flink/Spark)
+*   **Storage**: In-memory Time-series (Architecture supports ClickHouse/Druid)
+*   **Analysis**: Pandas/Scikit-learn
 
-## Running the Demo
+## 📁 Project Structure
 
-1.  Install dependencies:
-    ```bash
-    pip install -r requirements.txt
-    ```
-2.  Run the MVP demonstration:
-    ```bash
-    python3 demo.py
-    ```
-    This script demonstrates:
-    *   Loading metrics from `examples/metrics.yaml`.
-    *   Building and querying the Lineage Graph.
-    *   Simulating a Change Event and calculating Impact.
-    *   Training an Anomaly Detector and flagging outliers.
+```bash
+/
+├── design/                 # High-level Architecture Documents
+├── docs/                   # Documentation & Assets
+├── src/
+│   ├── api/                # FastAPI Backend
+│   ├── web/                # D3.js Dashboard
+│   ├── definition/         # Metric DSL & Graph Logic
+│   ├── rca_engine/         # Impact Analysis Engine
+│   └── alert_engine/       # Statistical Anomaly Detection
+├── examples/               # Sample Metric YAML Definitions
+└── demo.py                 # CLI Demo Script
+```
 
-3.  **Run the Web Dashboard**:
-    ```bash
-    python3 run_server.py
-    ```
-    Open [http://localhost:8000](http://localhost:8000) to view:
-    *   **Interactive Lineage Graph**: Drag and drop nodes to see relationships.
-    *   **Impact Simulator**: Choose a metric to "break" and see downstream effects.
-    *   **Anomaly Checker**: Test values against the statistical model.
+---
 
+## 🏁 Quick Start
 
+### 1. Prerequisite
+Ensure you have Python 3.9+ installed.
+
+```bash
+pip install -r requirements.txt
+```
+
+### 2. Run the CLI Demo
+See the logic in action without the UI.
+
+```bash
+python3 demo.py
+```
+
+### 3. Launch the Web Dashboard 🖥️
+Experience the full interactive platform.
+
+```bash
+python3 run_server.py
+```
+> Open **[http://localhost:8000](http://localhost:8000)** in your browser.
+
+*   **Interactive Lineage Graph**: Drag nodes to visualize dependencies.
+*   **Impact Simulator**: "Break" a metric and see the red blast radius.
+*   **Anomaly Checker**: Test values against the AI detector.
+
+---
+
+## 🔮 Roadmap
+
+*   [x] **mvp**: In-memory graph & basic anomaly detection.
+*   [x] **ui**: D3.js visualization.
+*   [ ] **scale**: Move graph to Neo4j/NetworkX-Postgres.
+*   [ ] **stream**: Connect to Kafka + Flink for real-time aggregation.
+*   [ ] **ai**: Integrate LLMs for "Chat with your Metrics" (RCA Explanations).
