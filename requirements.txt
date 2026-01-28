@@ -1,0 +1,6 @@
+pydantic
+networkx
+pandas
+numpy
+pytest
+pyyaml

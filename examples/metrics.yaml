@@ -1,0 +1,30 @@
+metrics:
+  - name: "ad_impressions"
+    type: "counter"
+    owner: "ads_team"
+    source_event: "ad_log"
+    aggregation_field: "1"
+
+  - name: "ad_clicks"
+    type: "counter"
+    owner: "ads_team"
+    source_event: "ad_log"
+    aggregation_field: "is_click"
+
+  - name: "ctr"
+    type: "ratio"
+    owner: "ads_team"
+    dependencies: ["ad_clicks", "ad_impressions"]
+    expression: "ad_clicks / ad_impressions"
+
+  - name: "revenue"
+    type: "counter"
+    owner: "finance"
+    source_event: "payment_log"
+    aggregation_field: "amount"
+
+  - name: "rpm"
+    type: "composite"
+    owner: "ads_team"
+    dependencies: ["revenue", "ad_impressions"]
+    expression: "(revenue / ad_impressions) * 1000"
