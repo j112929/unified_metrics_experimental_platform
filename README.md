@@ -43,3 +43,13 @@ The platform follows a standard data engineering lifecycle with advanced capabil
     *   Simulating a Change Event and calculating Impact.
     *   Training an Anomaly Detector and flagging outliers.
 
+3.  **Run the Web Dashboard**:
+    ```bash
+    python3 run_server.py
+    ```
+    Open [http://localhost:8000](http://localhost:8000) to view:
+    *   **Interactive Lineage Graph**: Drag and drop nodes to see relationships.
+    *   **Impact Simulator**: Choose a metric to "break" and see downstream effects.
+    *   **Anomaly Checker**: Test values against the statistical model.
+
+

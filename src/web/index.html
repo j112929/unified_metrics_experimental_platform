@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Unified Metrics Platform</title>
+    <style>
+        :root {
+            --bg-color: #0f172a;
+            --text-color: #f8fafc;
+            --card-bg: #1e293b;
+            --primary: #3b82f6;
+            --danger: #ef4444;
+            --success: #22c55e;
+            --border: #334155;
+        }
+        body {
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            display: flex;
+            height: 100vh;
+        }
+        .sidebar {
+            width: 300px;
+            background-color: var(--card-bg);
+            padding: 20px;
+            border-right: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+        .main {
+            flex-grow: 1;
+            position: relative;
+            overflow: hidden;
+        }
+        h1, h2, h3 { margin: 0; }
+        .control-group {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        label { font-size: 0.9em; color: #94a3b8; }
+        input, select, button {
+            padding: 10px;
+            border-radius: 6px;
+            border: 1px solid var(--border);
+            background: var(--bg-color);
+            color: white;
+            font-family: inherit;
+        }
+        button {
+            background-color: var(--primary);
+            border: none;
+            cursor: pointer;
+            font-weight: 600;
+            transition: opacity 0.2s;
+        }
+        button:hover { opacity: 0.9; }
+        
+        #graph-container {
+            width: 100%;
+            height: 100%;
+        }
+
+        .panel {
+            background: var(--card-bg);
+            padding: 15px;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+        }
+
+        #results {
+            margin-top: 20px;
+            font-size: 0.9em;
+        }
+        .metric-badge {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 4px;
+            background: var(--border);
+            margin: 2px;
+            font-size: 0.8em;
+        }
+        .impact-high { border-left: 4px solid var(--danger); }
+        .anomaly-true { color: var(--danger); font-weight: bold; }
+        .anomaly-false { color: var(--success); }
+
+    </style>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+</head>
+<body>
+    <div class="sidebar">
+        <div>
+            <h2>UMP Dashboard</h2>
+            <p style="color: #94a3b8; font-size: 0.9em;">Staff-Level Observability</p>
+        </div>
+
+        <div class="panel">
+            <h3>Simulate Change</h3>
+            <div class="control-group" style="margin-top: 10px;">
+                <label>Change Description</label>
+                <input type="text" id="desc" value="Deploy v2.0">
+            </div>
+            <div class="control-group">
+                <label>Affected Metric</label>
+                <select id="affected-metric"></select>
+            </div>
+            <div class="control-group">
+                <button onclick="analyzeImpact()">Analyze Impact</button>
+            </div>
+            <div id="impact-results"></div>
+        </div>
+
+        <div class="panel">
+            <h3>Detect Anomaly</h3>
+            <div class="control-group" style="margin-top: 10px;">
+                <label>Metric Value</label>
+                <input type="number" id="anom-val" value="100">
+            </div>
+            <div class="control-group">
+                <button onclick="checkAnomaly()">Check</button>
+            </div>
+            <div id="anomaly-results" style="margin-top: 10px;"></div>
+        </div>
+    </div>
+
+    <div class="main">
+        <div id="graph-container"></div>
+    </div>
+
+    <script>
+        let metrics = [];
+
+        // Fetch Metrics on Load
+        async function fetchMetrics() {
+            const res = await fetch('/api/metrics');
+            metrics = await res.json();
+            const select = document.getElementById('affected-metric');
+            metrics.forEach(m => {
+                const opt = document.createElement('option');
+                opt.value = m.name;
+                opt.innerText = m.name;
+                select.appendChild(opt);
+            });
+            drawGraph();
+        }
+
+        // Draw Lineage Graph with D3
+        async function drawGraph() {
+            const res = await fetch('/api/lineage');
+            const data = await res.json();
+            
+            const width = document.getElementById('graph-container').clientWidth;
+            const height = document.getElementById('graph-container').clientHeight;
+
+            // Clear previous
+            d3.select("#graph-container").innerHTML = "";
+
+            const svg = d3.select("#graph-container").append("svg")
+                .attr("width", width)
+                .attr("height", height);
+
+            const simulation = d3.forceSimulation(data.nodes)
+                .force("link", d3.forceLink(data.links).id(d => d.id).distance(150))
+                .force("charge", d3.forceManyBody().strength(-300))
+                .force("center", d3.forceCenter(width / 2, height / 2));
+
+            // Arrows
+            svg.append("defs").selectAll("marker")
+                .data(["end"])
+                .enter().append("marker")
+                .attr("id", "arrow")
+                .attr("viewBox", "0 -5 10 10")
+                .attr("refX", 25) // pushed back a bit
+                .attr("refY", 0)
+                .attr("markerWidth", 6)
+                .attr("markerHeight", 6)
+                .attr("orient", "auto")
+                .append("path")
+                .attr("d", "M0,-5L10,0L0,5")
+                .attr("fill", "#94a3b8");
+
+            const link = svg.append("g")
+                .selectAll("line")
+                .data(data.links)
+                .enter().append("line")
+                .attr("stroke", "#475569")
+                .attr("stroke-width", 2)
+                .attr("marker-end", "url(#arrow)");
+
+            const node = svg.append("g")
+                .selectAll("g")
+                .data(data.nodes)
+                .enter().append("g")
+                .call(d3.drag()
+                    .on("start", dragstarted)
+                    .on("drag", dragged)
+                    .on("end", dragended));
+
+            // Node Circles
+            node.append("circle")
+                .attr("r", 20)
+                .attr("fill", d => {
+                    if (d.type === 'counter') return '#3b82f6';
+                    if (d.type === 'ratio') return '#8b5cf6';
+                    return '#10b981';
+                })
+                .attr("stroke", "#fff")
+                .attr("stroke-width", 1.5);
+
+            // Node Labels
+            node.append("text")
+                .text(d => d.id)
+                .attr("x", 25)
+                .attr("y", 5)
+                .attr("fill", "#e2e8f0")
+                .style("font-size", "12px")
+                .style("font-family", "sans-serif");
+
+            simulation.on("tick", () => {
+                link
+                    .attr("x1", d => d.source.x)
+                    .attr("y1", d => d.source.y)
+                    .attr("x2", d => d.target.x)
+                    .attr("y2", d => d.target.y);
+
+                node
+                    .attr("transform", d => `translate(${d.x},${d.y})`);
+            });
+
+            function dragstarted(event, d) {
+                if (!event.active) simulation.alphaTarget(0.3).restart();
+                d.fx = d.x;
+                d.fy = d.y;
+            }
+            function dragged(event, d) {
+                d.fx = event.x;
+                d.fy = event.y;
+            }
+            function dragended(event, d) {
+                if (!event.active) simulation.alphaTarget(0);
+                d.fx = null;
+                d.fy = null;
+            }
+        }
+
+        async function analyzeImpact() {
+            const desc = document.getElementById('desc').value;
+            const metric = document.getElementById('affected-metric').value;
+            
+            const res = await fetch('/api/impact', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ description: desc, related_metrics: [metric] })
+            });
+            const data = await res.json();
+            
+            const div = document.getElementById('impact-results');
+            div.innerHTML = `
+                <div class="panel impact-high" style="margin-top: 10px;">
+                    <div><strong>Score:</strong> ${data.severity_score}</div>
+                    <div style="margin-top:5px; color: #cbd5e1">Impacts:</div>
+                    ${data.impacted_metrics.map(m => `<span class="metric-badge">${m}</span>`).join('')}
+                </div>
+            `;
+        }
+
+        async function checkAnomaly() {
+            const val = parseFloat(document.getElementById('anom-val').value);
+            const res = await fetch('/api/anomaly', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ metric: "any", value: val })
+            });
+            const data = await res.json();
+            
+            document.getElementById('anomaly-results').innerHTML = `
+                <div>Anomaly: <span class="${data.is_anomaly ? 'anomaly-true' : 'anomaly-false'}">${data.is_anomaly ? 'YES' : 'NO'}</span></div>
+                <div style="font-size: 0.8em; color: #94a3b8">Score: ${data.score.toFixed(2)}</div>
+                <div style="font-size: 0.8em; color: #94a3b8">Range: [${data.expected_range[0].toFixed(1)}, ${data.expected_range[1].toFixed(1)}]</div>
+            `;
+        }
+
+        fetchMetrics();
+    </script>
+</body>
+</html>
